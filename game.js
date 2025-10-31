@@ -20,6 +20,10 @@ let warningTimer = null; // null means no timer active, otherwise it's the end t
 const WARNING_TIMER_DURATION = 20000; // 20 seconds in milliseconds
 let hasSolidLayerAboveOverdraft = false;
 
+// Line clearing animation state
+let clearingAnimation = null; // { rows: [row numbers], startTime: timestamp }
+const CLEARING_ANIMATION_DURATION = 300; // milliseconds
+
 // Game state
 let canvas, ctx;
 let gameRunning = false;
@@ -253,7 +257,7 @@ function checkSolidLayerAboveOverdraft() {
     return false;
 }
 
-// Clear solid layers anywhere on the board and make blocks fall down
+// Find solid rows and start clearing animation
 function clearSolidLayers() {
     const rowsToClear = [];
     
@@ -274,52 +278,87 @@ function clearSolidLayers() {
         }
     }
     
-    // Clear solid rows and make blocks above fall down
-    if (rowsToClear.length > 0) {
-        // Sort cleared rows from bottom to top (highest row number first)
-        rowsToClear.sort((a, b) => b - a);
-        
-        // Remove all cleared rows first
-        for (let clearedRow of rowsToClear) {
-            delete stackedBlocks[clearedRow];
-        }
-        
-        // Now shift all remaining rows down to fill gaps
-        // Process from bottom to top to avoid overwriting
-        const newStackedBlocks = {};
-        
-        // Copy all rows that aren't being cleared, shifting them down
-        // Count how many rows have been cleared below each position
-        for (let sourceRow = 0; sourceRow < ROWS; sourceRow++) {
-            if (stackedBlocks[sourceRow] && !rowsToClear.includes(sourceRow)) {
-                // Count how many cleared rows are below this row
-                let rowsClearedBelow = 0;
-                for (let clearedRow of rowsToClear) {
-                    if (clearedRow > sourceRow) {
-                        rowsClearedBelow++;
-                    }
-                }
-                
-                // Move this row down by the number of cleared rows below it
-                const targetRow = sourceRow + rowsClearedBelow;
-                if (targetRow < ROWS) {
-                    newStackedBlocks[targetRow] = [...stackedBlocks[sourceRow]];
+    // If there are rows to clear, start the animation
+    if (rowsToClear.length > 0 && clearingAnimation === null) {
+        clearingAnimation = {
+            rows: rowsToClear,
+            startTime: Date.now()
+        };
+    }
+}
+
+// Actually clear the rows and shift blocks down (called after animation)
+function performLineClearing(rowsToClear) {
+    if (rowsToClear.length === 0) return;
+    
+    // Sort cleared rows from bottom to top (highest row number first)
+    rowsToClear.sort((a, b) => b - a);
+    
+    // Remove all cleared rows first
+    for (let clearedRow of rowsToClear) {
+        delete stackedBlocks[clearedRow];
+    }
+    
+    // Now shift all remaining rows down to fill gaps
+    const newStackedBlocks = {};
+    
+    // Copy all rows that aren't being cleared, shifting them down
+    // Count how many rows have been cleared below each position
+    for (let sourceRow = 0; sourceRow < ROWS; sourceRow++) {
+        if (stackedBlocks[sourceRow] && !rowsToClear.includes(sourceRow)) {
+            // Count how many cleared rows are below this row
+            let rowsClearedBelow = 0;
+            for (let clearedRow of rowsToClear) {
+                if (clearedRow > sourceRow) {
+                    rowsClearedBelow++;
                 }
             }
-        }
-        
-        // Replace stackedBlocks with the new arrangement
-        // First, clear everything
-        for (let row = 0; row < ROWS; row++) {
-            delete stackedBlocks[row];
-        }
-        
-        // Then copy back the new arrangement
-        for (let row = 0; row < ROWS; row++) {
-            if (newStackedBlocks[row]) {
-                stackedBlocks[row] = newStackedBlocks[row];
+            
+            // Move this row down by the number of cleared rows below it
+            const targetRow = sourceRow + rowsClearedBelow;
+            if (targetRow < ROWS) {
+                newStackedBlocks[targetRow] = [...stackedBlocks[sourceRow]];
             }
         }
+    }
+    
+    // Replace stackedBlocks with the new arrangement
+    // First, clear everything
+    for (let row = 0; row < ROWS; row++) {
+        delete stackedBlocks[row];
+    }
+    
+    // Then copy back the new arrangement
+    for (let row = 0; row < ROWS; row++) {
+        if (newStackedBlocks[row]) {
+            stackedBlocks[row] = newStackedBlocks[row];
+        }
+    }
+}
+
+// Draw line clearing animation
+function drawLineClearingAnimation() {
+    if (clearingAnimation === null) return;
+    
+    const elapsed = Date.now() - clearingAnimation.startTime;
+    const progress = elapsed / CLEARING_ANIMATION_DURATION;
+    
+    if (progress >= 1.0) {
+        // Animation complete, actually clear the rows
+        performLineClearing(clearingAnimation.rows);
+        clearingAnimation = null;
+        return;
+    }
+    
+    // Draw flashing effect on rows being cleared
+    // Flash intensity based on progress (faster at end)
+    const flashIntensity = Math.abs(Math.sin(progress * Math.PI * 10)) * (1 - progress * 0.5);
+    
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.5 * flashIntensity})`;
+    
+    for (let row of clearingAnimation.rows) {
+        const y = row * CELL_SIZE;
+        ctx.fillRect(0, y, BOARD_WIDTH, CELL_SIZE);
     }
 }
 
@@ -481,6 +520,9 @@ function draw() {
 
     // Draw stacked blocks
     drawStackedBlocks();
+    
+    // Draw line clearing animation (overlays on blocks being cleared)
+    drawLineClearingAnimation();
 
     // Draw current falling piece
     if (currentPiece) {
@@ -570,6 +612,7 @@ function startGame() {
     stackedBlocks = [];
     blocksPlaced = 0;
     warningTimer = null;
+    clearingAnimation = null;
     hasSolidLayerAboveOverdraft = false;
     currentPiece = createNewPiece();
     dropTime = 0;
