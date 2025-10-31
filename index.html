@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquidity Rush</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="header">
+            <h1>Liquidity Rush</h1>
+            <div class="game-info">
+                <div class="score-display">
+                    <span>Time: <span id="time">0</span>s</span>
+                    <span>Balance: <span id="balance">50%</span></span>
+                </div>
+                <button id="start-btn">Start Game</button>
+            </div>
+        </div>
+        
+        <div class="game-board-container">
+            <div class="instructions">
+                <p><strong>Controls:</strong> ← → to move, ↑ to rotate</p>
+                <p><strong>Goal:</strong> Keep balance in the green zone (40-60%)</p>
+            </div>
+            <canvas id="game-canvas" width="300" height="600"></canvas>
+        </div>
+        
+        <div id="game-over" class="game-over hidden">
+            <h2>Game Over!</h2>
+            <p>You survived for <span id="final-time">0</span> seconds</p>
+            <button id="restart-btn">Play Again</button>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
+
