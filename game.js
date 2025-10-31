@@ -223,11 +223,14 @@ function placeBlock(block) {
 
     blocksPlaced++;
     
-    // Check if we now have a solid layer above overdraft line
+    // Clear solid layers above overdraft line (if any)
+    clearSolidLayersAboveOverdraft();
+    
+    // Check if there's still a solid layer after clearing
     hasSolidLayerAboveOverdraft = checkSolidLayerAboveOverdraft();
 }
 
-// Check if there's a solid layer above the overdraft line
+// Check if there's a solid layer above the overdraft line (just check, don't clear)
 function checkSolidLayerAboveOverdraft() {
     const overdraftRow = Math.floor(OVERDRAFT_Y / CELL_SIZE);
     
@@ -250,30 +253,81 @@ function checkSolidLayerAboveOverdraft() {
     return false;
 }
 
-// Get the top block position (lowest Y value of all stacked blocks)
+// Clear solid layers above overdraft line and make blocks fall
+function clearSolidLayersAboveOverdraft() {
+    const overdraftRow = Math.floor(OVERDRAFT_Y / CELL_SIZE);
+    const rowsToClear = [];
+    
+    // Find all solid rows above the overdraft line
+    for (let row = 0; row < overdraftRow; row++) {
+        if (stackedBlocks[row]) {
+            // Check if this row is solid (all columns filled)
+            let isSolid = true;
+            for (let col = 0; col < COLS; col++) {
+                if (!stackedBlocks[row][col]) {
+                    isSolid = false;
+                    break;
+                }
+            }
+            if (isSolid) {
+                rowsToClear.push(row);
+            }
+        }
+    }
+    
+    // Clear solid rows and make blocks above fall down
+    if (rowsToClear.length > 0) {
+        // Sort rows to clear from bottom to top
+        rowsToClear.sort((a, b) => b - a);
+        
+        // Create a new array with blocks shifted down
+        const newStackedBlocks = [];
+        let writeRow = 0;
+        
+        // Copy all rows except the ones to clear
+        for (let row = 0; row < overdraftRow; row++) {
+            if (!rowsToClear.includes(row)) {
+                if (stackedBlocks[row]) {
+                    newStackedBlocks[writeRow] = [...stackedBlocks[row]];
+                }
+                writeRow++;
+            }
+        }
+        
+        // Copy remaining rows below overdraft line
+        for (let row = overdraftRow; row < ROWS; row++) {
+            if (stackedBlocks[row]) {
+                newStackedBlocks[writeRow] = [...stackedBlocks[row]];
+            }
+            writeRow++;
+        }
+        
+        // Update stackedBlocks with the new arrangement
+        for (let row = 0; row < ROWS; row++) {
+            if (newStackedBlocks[row]) {
+                stackedBlocks[row] = newStackedBlocks[row];
+            } else {
+                delete stackedBlocks[row];
+            }
+        }
+        
+        // Clear any rows beyond what we wrote
+        for (let row = writeRow; row < ROWS; row++) {
+            delete stackedBlocks[row];
+        }
+    }
+}
+
+// Get the top block position (lowest Y value of stacked blocks only - not falling piece)
 function getTopBlockPosition() {
     let topY = BOARD_HEIGHT; // Start at bottom, work up
     
+    // Only check stacked blocks, not the current falling piece
     for (let row = 0; row < ROWS; row++) {
         if (stackedBlocks[row]) {
             for (let col = 0; col < COLS; col++) {
                 if (stackedBlocks[row][col]) {
                     const y = row * CELL_SIZE;
-                    if (y < topY) {
-                        topY = y;
-                    }
-                }
-            }
-        }
-    }
-    
-    // Also check current falling piece
-    if (currentPiece) {
-        const shape = currentPiece.getRotatedShape();
-        for (let row = 0; row < shape.length; row++) {
-            for (let col = 0; col < shape[row].length; col++) {
-                if (shape[row][col]) {
-                    const y = currentPiece.y + row * CELL_SIZE;
                     if (y < topY) {
                         topY = y;
                     }
@@ -463,7 +517,7 @@ function gameLoop(time = 0) {
         dropTime = 0;
     }
 
-    // Check if there's a solid layer above overdraft line
+    // Check if there's a solid layer above overdraft line (for timer activation)
     hasSolidLayerAboveOverdraft = checkSolidLayerAboveOverdraft();
     
     // Timer logic: only check after solid layer is established
