@@ -630,6 +630,15 @@ function gameLoop(time = 0) {
     // Check if there's a solid layer above overdraft line (for timer activation)
     hasSolidLayerAboveOverdraft = checkSolidLayerAboveOverdraft();
     
+    // Timer logic: check timer expiration first (even if solid layer is gone)
+    if (warningTimer !== null) {
+        const now = Date.now();
+        if (now >= warningTimer) {
+            endGame('Time Limit Exceeded!');
+            return;
+        }
+    }
+    
     // Timer logic: only check after solid layer is established
     if (hasSolidLayerAboveOverdraft) {
         const topBlockY = getTopBlockPosition();
@@ -651,15 +660,6 @@ function gameLoop(time = 0) {
                 // Top block is outside safe zone - start timer if not already started
                 if (warningTimer === null) {
                     warningTimer = Date.now() + WARNING_TIMER_DURATION;
-                }
-                
-                // Check if timer has expired
-                if (warningTimer !== null) {
-                    const now = Date.now();
-                    if (now >= warningTimer) {
-                        endGame('Time Limit Exceeded!');
-                        return;
-                    }
                 }
             } else if (isTopBlockInSafeZone) {
                 // Top block is back in safe zone - cancel timer
