@@ -276,38 +276,33 @@ function clearSolidLayers() {
     
     // Clear solid rows and make blocks above fall down
     if (rowsToClear.length > 0) {
-        // Process from top to bottom, shifting rows above cleared rows downward
-        // Rows move from lower row numbers to higher row numbers (toward bottom of screen)
-        const rowsToClearSet = new Set(rowsToClear);
-        const newStackedBlocks = {};
-        let targetRow = 0; // Start from top
+        // Sort cleared rows from top to bottom
+        rowsToClear.sort((a, b) => a - b);
         
-        // Go through all rows from top to bottom
-        for (let sourceRow = 0; sourceRow < ROWS; sourceRow++) {
-            // If this row is not being cleared, copy it to the target position
-            if (!rowsToClearSet.has(sourceRow)) {
-                // Copy the row if it has blocks
-                if (stackedBlocks[sourceRow]) {
-                    newStackedBlocks[targetRow] = [...stackedBlocks[sourceRow]];
+        // For each cleared row, make all rows above it shift down by one
+        for (let clearedRow of rowsToClear) {
+            // Shift all rows above the cleared row down by one
+            // Process from the row just above the cleared row down to row 0
+            for (let row = clearedRow - 1; row >= 0; row--) {
+                if (stackedBlocks[row]) {
+                    // Move this row down by one (to higher row number = lower on screen)
+                    stackedBlocks[row + 1] = [...stackedBlocks[row]];
+                    delete stackedBlocks[row];
                 }
-                // Increment targetRow for non-cleared rows
-                // This makes rows above cleared rows shift down (to higher row numbers)
-                targetRow++;
             }
-            // If this row is being cleared, skip it (don't copy, don't increment targetRow)
-            // This creates the gap that makes rows above shift down toward bottom
-        }
-        
-        // Replace stackedBlocks with the new arrangement
-        // First, clear everything
-        for (let row = 0; row < ROWS; row++) {
-            delete stackedBlocks[row];
-        }
-        
-        // Then copy back the new arrangement
-        for (let row = 0; row < ROWS; row++) {
-            if (newStackedBlocks[row]) {
-                stackedBlocks[row] = newStackedBlocks[row];
+            
+            // Clear the topmost row (row 0 moves down, leaving row 0 empty)
+            // Actually, we want to clear the cleared row itself, not row 0
+            // The cleared row should be empty now after shifting
+            if (stackedBlocks[clearedRow]) {
+                delete stackedBlocks[clearedRow];
+            }
+            
+            // Adjust indices for subsequent cleared rows
+            for (let i = 0; i < rowsToClear.length; i++) {
+                if (rowsToClear[i] < clearedRow) {
+                    rowsToClear[i]++;
+                }
             }
         }
     }
