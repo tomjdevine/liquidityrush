@@ -276,26 +276,26 @@ function clearSolidLayers() {
     
     // Clear solid rows and make blocks above fall down
     if (rowsToClear.length > 0) {
-        // Create a new array, copying only rows that aren't being cleared
-        // This automatically makes all rows above cleared rows shift down
+        // Process from top to bottom, shifting rows above cleared rows downward
+        // Rows move from lower row numbers to higher row numbers (toward bottom of screen)
+        const rowsToClearSet = new Set(rowsToClear);
         const newStackedBlocks = {};
-        let targetRow = 0;
+        let targetRow = 0; // Start from top
         
         // Go through all rows from top to bottom
         for (let sourceRow = 0; sourceRow < ROWS; sourceRow++) {
             // If this row is not being cleared, copy it to the target position
-            if (!rowsToClear.includes(sourceRow)) {
-                // Copy the row (even if empty, we maintain spacing)
-                // But only store rows that have blocks
+            if (!rowsToClearSet.has(sourceRow)) {
+                // Copy the row if it has blocks
                 if (stackedBlocks[sourceRow]) {
                     newStackedBlocks[targetRow] = [...stackedBlocks[sourceRow]];
                 }
-                // Always increment targetRow for non-cleared rows
-                // This ensures rows above cleared rows shift down correctly
+                // Increment targetRow for non-cleared rows
+                // This makes rows above cleared rows shift down (to higher row numbers)
                 targetRow++;
             }
             // If this row is being cleared, skip it (don't copy, don't increment targetRow)
-            // This creates the gap that makes rows above shift down
+            // This creates the gap that makes rows above shift down toward bottom
         }
         
         // Replace stackedBlocks with the new arrangement
