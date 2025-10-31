@@ -15,6 +15,11 @@ const EXCESS_CASH_Y = BOARD_HEIGHT * EXCESS_CASH_LINE;
 let gracePeriodBlocks = 5;
 let blocksPlaced = 0;
 
+// Timer state
+let warningTimer = null; // null means no timer active, otherwise it's the end time
+const WARNING_TIMER_DURATION = 20000; // 20 seconds in milliseconds
+let hasSolidLayerAboveOverdraft = false;
+
 // Game state
 let canvas, ctx;
 let gameRunning = false;
@@ -218,14 +223,66 @@ function placeBlock(block) {
 
     blocksPlaced++;
     
-    // Check game over conditions: blocks must be above overdraft line and below excess cash line
-    if (hasExcessCashBlocks) {
-        // Blocks went above the excess cash line (too high)
-        endGame('Excess Cash Limit Exceeded!');
-    } else if (hasOverdraftBlocks) {
-        // Blocks went below the overdraft line (too low)
-        endGame('Overdraft Limit Exceeded!');
+    // Check if we now have a solid layer above overdraft line
+    hasSolidLayerAboveOverdraft = checkSolidLayerAboveOverdraft();
+}
+
+// Check if there's a solid layer above the overdraft line
+function checkSolidLayerAboveOverdraft() {
+    const overdraftRow = Math.floor(OVERDRAFT_Y / CELL_SIZE);
+    
+    // Check if there's at least one complete row above the overdraft line
+    for (let row = 0; row < overdraftRow; row++) {
+        if (stackedBlocks[row]) {
+            // Check if this row is solid (all columns filled)
+            let isSolid = true;
+            for (let col = 0; col < COLS; col++) {
+                if (!stackedBlocks[row][col]) {
+                    isSolid = false;
+                    break;
+                }
+            }
+            if (isSolid) {
+                return true;
+            }
+        }
     }
+    return false;
+}
+
+// Get the top block position (lowest Y value of all stacked blocks)
+function getTopBlockPosition() {
+    let topY = BOARD_HEIGHT; // Start at bottom, work up
+    
+    for (let row = 0; row < ROWS; row++) {
+        if (stackedBlocks[row]) {
+            for (let col = 0; col < COLS; col++) {
+                if (stackedBlocks[row][col]) {
+                    const y = row * CELL_SIZE;
+                    if (y < topY) {
+                        topY = y;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Also check current falling piece
+    if (currentPiece) {
+        const shape = currentPiece.getRotatedShape();
+        for (let row = 0; row < shape.length; row++) {
+            for (let col = 0; col < shape[row].length; col++) {
+                if (shape[row][col]) {
+                    const y = currentPiece.y + row * CELL_SIZE;
+                    if (y < topY) {
+                        topY = y;
+                    }
+                }
+            }
+        }
+    }
+    
+    return topY === BOARD_HEIGHT ? null : topY;
 }
 
 // Check if piece should stop falling
@@ -322,6 +379,30 @@ function updateBalanceDisplay() {
     balanceElement.textContent = blocksPlaced;
 }
 
+// Draw timer warning
+function drawTimerWarning() {
+    if (warningTimer === null) return;
+    
+    const now = Date.now();
+    const remaining = Math.max(0, warningTimer - now);
+    const seconds = Math.ceil(remaining / 1000);
+    
+    // Draw warning overlay
+    ctx.fillStyle = 'rgba(244, 67, 54, 0.3)';
+    ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+    
+    // Draw timer text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(seconds, BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
+    
+    // Draw warning text
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillText('WARNING!', BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 40);
+}
+
 // Update time display
 function updateTimeDisplay() {
     if (gameRunning) {
@@ -346,6 +427,9 @@ function draw() {
     if (currentPiece) {
         currentPiece.draw();
     }
+    
+    // Draw timer warning if active
+    drawTimerWarning();
 }
 
 // Game loop
@@ -379,6 +463,38 @@ function gameLoop(time = 0) {
         dropTime = 0;
     }
 
+    // Check if there's a solid layer above overdraft line
+    hasSolidLayerAboveOverdraft = checkSolidLayerAboveOverdraft();
+    
+    // Timer logic: only check after solid layer is established
+    if (hasSolidLayerAboveOverdraft) {
+        const topBlockY = getTopBlockPosition();
+        
+        if (topBlockY !== null) {
+            const isTopBlockBelowOverdraft = topBlockY > OVERDRAFT_Y;
+            const isTopBlockAboveExcessCash = topBlockY < EXCESS_CASH_Y;
+            
+            if (isTopBlockBelowOverdraft || isTopBlockAboveExcessCash) {
+                // Top block is outside safe zone - start timer if not already started
+                if (warningTimer === null) {
+                    warningTimer = Date.now() + WARNING_TIMER_DURATION;
+                }
+                
+                // Check if timer has expired
+                if (warningTimer !== null) {
+                    const now = Date.now();
+                    if (now >= warningTimer) {
+                        endGame('Time Limit Exceeded!');
+                        return;
+                    }
+                }
+            } else {
+                // Top block is back in safe zone - cancel timer
+                warningTimer = null;
+            }
+        }
+    }
+
     // Update time display
     updateTimeDisplay();
 
@@ -394,6 +510,8 @@ function startGame() {
     gameStartTime = Date.now();
     stackedBlocks = [];
     blocksPlaced = 0;
+    warningTimer = null;
+    hasSolidLayerAboveOverdraft = false;
     currentPiece = createNewPiece();
     dropTime = 0;
     lastTime = performance.now();
