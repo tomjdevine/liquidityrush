@@ -223,10 +223,10 @@ function placeBlock(block) {
 
     blocksPlaced++;
     
-    // Clear solid layers above overdraft line (if any)
-    clearSolidLayersAboveOverdraft();
+    // Clear solid layers anywhere on the board (if any)
+    clearSolidLayers();
     
-    // Check if there's still a solid layer after clearing
+    // Check if there's still a solid layer above overdraft line after clearing
     hasSolidLayerAboveOverdraft = checkSolidLayerAboveOverdraft();
 }
 
@@ -253,13 +253,12 @@ function checkSolidLayerAboveOverdraft() {
     return false;
 }
 
-// Clear solid layers above overdraft line and make blocks fall
-function clearSolidLayersAboveOverdraft() {
-    const overdraftRow = Math.floor(OVERDRAFT_Y / CELL_SIZE);
+// Clear solid layers anywhere on the board and make blocks fall down
+function clearSolidLayers() {
     const rowsToClear = [];
     
-    // Find all solid rows above the overdraft line
-    for (let row = 0; row < overdraftRow; row++) {
+    // Find all solid rows (complete rows) anywhere on the board
+    for (let row = 0; row < ROWS; row++) {
         if (stackedBlocks[row]) {
             // Check if this row is solid (all columns filled)
             let isSolid = true;
@@ -277,15 +276,16 @@ function clearSolidLayersAboveOverdraft() {
     
     // Clear solid rows and make blocks above fall down
     if (rowsToClear.length > 0) {
-        // Sort rows to clear from bottom to top
-        rowsToClear.sort((a, b) => b - a);
+        // Sort rows to clear from top to bottom (process top rows first)
+        rowsToClear.sort((a, b) => a - b);
         
         // Create a new array with blocks shifted down
         const newStackedBlocks = [];
         let writeRow = 0;
         
         // Copy all rows except the ones to clear
-        for (let row = 0; row < overdraftRow; row++) {
+        // Blocks above cleared rows will naturally move down (increase row number)
+        for (let row = 0; row < ROWS; row++) {
             if (!rowsToClear.includes(row)) {
                 if (stackedBlocks[row]) {
                     newStackedBlocks[writeRow] = [...stackedBlocks[row]];
@@ -294,12 +294,9 @@ function clearSolidLayersAboveOverdraft() {
             }
         }
         
-        // Copy remaining rows below overdraft line
-        for (let row = overdraftRow; row < ROWS; row++) {
-            if (stackedBlocks[row]) {
-                newStackedBlocks[writeRow] = [...stackedBlocks[row]];
-            }
-            writeRow++;
+        // Clear all remaining rows (everything after what we wrote)
+        for (let row = writeRow; row < ROWS; row++) {
+            delete newStackedBlocks[row];
         }
         
         // Update stackedBlocks with the new arrangement
@@ -309,11 +306,6 @@ function clearSolidLayersAboveOverdraft() {
             } else {
                 delete stackedBlocks[row];
             }
-        }
-        
-        // Clear any rows beyond what we wrote
-        for (let row = writeRow; row < ROWS; row++) {
-            delete stackedBlocks[row];
         }
     }
 }
