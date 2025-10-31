@@ -201,11 +201,14 @@ function placeBlock(block) {
                         type: block.type
                     };
                     
-                    // Check if block is in danger zone
+                    // Check if block is outside safe zone
+                    // Blocks must be BELOW the excess cash line (top) and ABOVE the overdraft line (bottom)
                     if (blockY < EXCESS_CASH_Y) {
+                        // Block is above the excess cash line (too high)
                         hasExcessCashBlocks = true;
                     }
                     if (blockY > OVERDRAFT_Y && blocksPlaced >= gracePeriodBlocks) {
+                        // Block is below the overdraft line (too low)
                         hasOverdraftBlocks = true;
                     }
                 }
@@ -215,10 +218,12 @@ function placeBlock(block) {
 
     blocksPlaced++;
     
-    // Check game over conditions (blocks must be between the two lines)
+    // Check game over conditions: blocks must be above overdraft line and below excess cash line
     if (hasExcessCashBlocks) {
+        // Blocks went above the excess cash line (too high)
         endGame('Excess Cash Limit Exceeded!');
     } else if (hasOverdraftBlocks) {
+        // Blocks went below the overdraft line (too low)
         endGame('Overdraft Limit Exceeded!');
     }
 }
