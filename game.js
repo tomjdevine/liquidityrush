@@ -5,11 +5,15 @@ const CELL_SIZE = 30;
 const COLS = BOARD_WIDTH / CELL_SIZE;
 const ROWS = BOARD_HEIGHT / CELL_SIZE;
 
-// Target zone (40-60% of board height)
-const TARGET_ZONE_TOP = 0.4;
-const TARGET_ZONE_BOTTOM = 0.6;
-const TARGET_TOP_Y = BOARD_HEIGHT * TARGET_ZONE_TOP;
-const TARGET_BOTTOM_Y = BOARD_HEIGHT * TARGET_ZONE_BOTTOM;
+// Two bands: overdraft (bottom) and excess cash (top)
+const OVERDRAFT_LINE = 0.8; // 80% from top (20% from bottom)
+const EXCESS_CASH_LINE = 0.2; // 20% from top
+const OVERDRAFT_Y = BOARD_HEIGHT * OVERDRAFT_LINE;
+const EXCESS_CASH_Y = BOARD_HEIGHT * EXCESS_CASH_LINE;
+
+// Grace period: number of blocks that can be placed before checking overdraft
+let gracePeriodBlocks = 5;
+let blocksPlaced = 0;
 
 // Game state
 let canvas, ctx;
@@ -180,12 +184,15 @@ function createNewPiece() {
 // Place block on the board
 function placeBlock(block) {
     const shape = block.getRotatedShape();
+    let hasExcessCashBlocks = false;
+    let hasOverdraftBlocks = false;
     
     for (let row = 0; row < shape.length; row++) {
         for (let col = 0; col < shape[row].length; col++) {
             if (shape[row][col]) {
                 const boardRow = Math.floor((block.y + row * CELL_SIZE) / CELL_SIZE);
                 const boardCol = block.x + col;
+                const blockY = block.y + row * CELL_SIZE;
                 
                 if (boardRow >= 0 && boardRow < ROWS) {
                     if (!stackedBlocks[boardRow]) {
@@ -194,12 +201,22 @@ function placeBlock(block) {
                     stackedBlocks[boardRow][boardCol] = {
                         type: block.type
                     };
+                    
+                    // Check if block is in danger zone
+                    if (blockY < EXCESS_CASH_Y) {
+                        hasExcessCashBlocks = true;
+                    }
+                    if (blockY > OVERDRAFT_Y && blocksPlaced >= gracePeriodBlocks) {
+                        hasOverdraftBlocks = true;
+                    }
                 }
             }
         }
     }
 
-    // Update balance based on block type and size
+    blocksPlaced++;
+    
+    // Update balance based on block type and size (for display purposes)
     let cellCount = 0;
     for (let row = 0; row < shape.length; row++) {
         for (let col = 0; col < shape[row].length; col++) {
@@ -207,7 +224,7 @@ function placeBlock(block) {
         }
     }
     
-    // Each cell changes balance by 2% (so a 5-cell block changes balance by 10%)
+    // Each cell changes balance by 2%
     const balanceChange = cellCount * 2;
     
     if (block.type === 'inflow') {
@@ -217,6 +234,13 @@ function placeBlock(block) {
     }
 
     updateBalanceDisplay();
+    
+    // Check game over conditions
+    if (hasExcessCashBlocks) {
+        endGame('Excess Cash Limit Exceeded!');
+    } else if (hasOverdraftBlocks) {
+        endGame('Overdraft Limit Exceeded!');
+    }
 }
 
 // Check if piece should stop falling
@@ -224,26 +248,59 @@ function shouldStopPiece(block) {
     return block.checkCollision(0, CELL_SIZE);
 }
 
-// Draw target zone
-function drawTargetZone() {
-    // Draw background gradient for target zone
-    const gradient = ctx.createLinearGradient(0, TARGET_TOP_Y, 0, TARGET_BOTTOM_Y);
-    gradient.addColorStop(0, 'rgba(76, 175, 80, 0.2)');
-    gradient.addColorStop(0.5, 'rgba(76, 175, 80, 0.3)');
-    gradient.addColorStop(1, 'rgba(76, 175, 80, 0.2)');
+// Draw two bands (overdraft and excess cash)
+function drawBands() {
+    // Draw safe zone (between the two lines)
+    const safeGradient = ctx.createLinearGradient(0, EXCESS_CASH_Y, 0, OVERDRAFT_Y);
+    safeGradient.addColorStop(0, 'rgba(76, 175, 80, 0.15)');
+    safeGradient.addColorStop(0.5, 'rgba(76, 175, 80, 0.25)');
+    safeGradient.addColorStop(1, 'rgba(76, 175, 80, 0.15)');
     
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, TARGET_TOP_Y, BOARD_WIDTH, TARGET_BOTTOM_Y - TARGET_TOP_Y);
+    ctx.fillStyle = safeGradient;
+    ctx.fillRect(0, EXCESS_CASH_Y, BOARD_WIDTH, OVERDRAFT_Y - EXCESS_CASH_Y);
     
-    // Draw borders
-    ctx.strokeStyle = '#4CAF50';
+    // Draw excess cash zone (top - above safe zone)
+    const excessGradient = ctx.createLinearGradient(0, 0, 0, EXCESS_CASH_Y);
+    excessGradient.addColorStop(0, 'rgba(255, 152, 0, 0.2)');
+    excessGradient.addColorStop(1, 'rgba(255, 152, 0, 0.1)');
+    
+    ctx.fillStyle = excessGradient;
+    ctx.fillRect(0, 0, BOARD_WIDTH, EXCESS_CASH_Y);
+    
+    // Draw overdraft zone (bottom - below safe zone)
+    const overdraftGradient = ctx.createLinearGradient(0, OVERDRAFT_Y, 0, BOARD_HEIGHT);
+    overdraftGradient.addColorStop(0, 'rgba(244, 67, 54, 0.1)');
+    overdraftGradient.addColorStop(1, 'rgba(244, 67, 54, 0.2)');
+    
+    ctx.fillStyle = overdraftGradient;
+    ctx.fillRect(0, OVERDRAFT_Y, BOARD_WIDTH, BOARD_HEIGHT - OVERDRAFT_Y);
+    
+    // Draw excess cash line (top)
+    ctx.strokeStyle = '#ff9800';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(0, TARGET_TOP_Y);
-    ctx.lineTo(BOARD_WIDTH, TARGET_TOP_Y);
-    ctx.moveTo(0, TARGET_BOTTOM_Y);
-    ctx.lineTo(BOARD_WIDTH, TARGET_BOTTOM_Y);
+    ctx.moveTo(0, EXCESS_CASH_Y);
+    ctx.lineTo(BOARD_WIDTH, EXCESS_CASH_Y);
     ctx.stroke();
+    
+    // Draw overdraft line (bottom)
+    ctx.strokeStyle = '#f44336';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, OVERDRAFT_Y);
+    ctx.lineTo(BOARD_WIDTH, OVERDRAFT_Y);
+    ctx.stroke();
+    
+    // Draw labels
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    
+    // Excess Cash label at top
+    ctx.fillText('EXCESS CASH', BOARD_WIDTH / 2, EXCESS_CASH_Y - 8);
+    
+    // Overdraft label at bottom
+    ctx.fillText('OVERDRAFT', BOARD_WIDTH / 2, OVERDRAFT_Y + 20);
 }
 
 // Draw stacked blocks
@@ -303,11 +360,6 @@ function drawBalanceIndicator() {
 function updateBalanceDisplay() {
     const balanceElement = document.getElementById('balance');
     balanceElement.textContent = Math.round(balance) + '%';
-    
-    // Check if balance is out of target zone (40-60%)
-    if (balance < 40 || balance > 60) {
-        endGame();
-    }
 }
 
 // Update time display
@@ -324,8 +376,8 @@ function draw() {
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
 
-    // Draw target zone
-    drawTargetZone();
+    // Draw bands (overdraft and excess cash)
+    drawBands();
 
     // Draw stacked blocks
     drawStackedBlocks();
@@ -346,9 +398,11 @@ function gameLoop(time = 0) {
     const deltaTime = time - lastTime;
     lastTime = time;
 
-    // Drop piece periodically
+    // Drop piece periodically (faster if down arrow is held)
     dropTime += deltaTime;
-    const dropInterval = 500; // milliseconds
+    const normalDropInterval = 500; // milliseconds
+    const fastDropInterval = 50; // milliseconds when down arrow is pressed
+    const dropInterval = keys['ArrowDown'] ? fastDropInterval : normalDropInterval;
 
     if (dropTime >= dropInterval) {
         if (currentPiece) {
@@ -358,7 +412,7 @@ function gameLoop(time = 0) {
                 
                 // Check if new piece collides immediately (game over condition)
                 if (shouldStopPiece(currentPiece)) {
-                    endGame();
+                    endGame('Stack Too High!');
                     return;
                 }
             } else {
@@ -383,6 +437,7 @@ function startGame() {
     gameStartTime = Date.now();
     balance = 50;
     stackedBlocks = [];
+    blocksPlaced = 0;
     currentPiece = createNewPiece();
     dropTime = 0;
     lastTime = performance.now();
@@ -396,13 +451,32 @@ function startGame() {
 }
 
 // End game
-function endGame() {
+function endGame(message = '') {
     if (!gameRunning) return;
     
     gameRunning = false;
     const elapsed = Math.floor((Date.now() - gameStartTime) / 1000);
     document.getElementById('final-time').textContent = elapsed;
-    document.getElementById('game-over').classList.remove('hidden');
+    
+    // Update game over message if provided
+    const gameOverDiv = document.getElementById('game-over');
+    if (message) {
+        const messageElement = gameOverDiv.querySelector('.game-over-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        } else {
+            const h2 = gameOverDiv.querySelector('h2');
+            const msgP = document.createElement('p');
+            msgP.className = 'game-over-message';
+            msgP.textContent = message;
+            msgP.style.color = '#ff6b6b';
+            msgP.style.fontSize = '1.2em';
+            msgP.style.marginBottom = '10px';
+            h2.insertAdjacentElement('afterend', msgP);
+        }
+    }
+    
+    gameOverDiv.classList.remove('hidden');
 }
 
 // Keyboard controls
@@ -421,6 +495,9 @@ document.addEventListener('keydown', (e) => {
             e.preventDefault();
         } else if (e.key === 'ArrowUp') {
             currentPiece.rotate();
+            e.preventDefault();
+        } else if (e.key === 'ArrowDown') {
+            // Fast drop - handled in game loop
             e.preventDefault();
         }
     }
