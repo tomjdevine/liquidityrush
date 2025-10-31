@@ -150,29 +150,60 @@ class Block {
         }
     }
 
+    // Draw dollar bill block
+    drawDollarBill(x, y) {
+        // Base green color (dollar bill green)
+        const baseColor = '#c9e7c5';
+        const darkGreen = '#87c87a';
+        const borderColor = '#5a8a4f';
+        
+        // Draw base rectangle with gradient (dollar bill color)
+        const gradient = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
+        gradient.addColorStop(0, baseColor);
+        gradient.addColorStop(0.5, '#b5d9b0');
+        gradient.addColorStop(1, darkGreen);
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+        
+        // Draw border (dollar bill edge)
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 0.5, y + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+        
+        // Add some dollar bill pattern/texture
+        ctx.strokeStyle = 'rgba(90, 138, 79, 0.3)';
+        ctx.lineWidth = 0.5;
+        
+        // Draw horizontal lines (bill texture)
+        for (let i = 0; i < 3; i++) {
+            const offsetY = y + 2 + (i * (CELL_SIZE - 4) / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + 2, offsetY);
+            ctx.lineTo(x + CELL_SIZE - 2, offsetY);
+            ctx.stroke();
+        }
+        
+        // Draw dollar sign pattern
+        ctx.fillStyle = 'rgba(90, 138, 79, 0.4)';
+        ctx.font = `${CELL_SIZE * 0.5}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+    }
+
     // Draw block
     draw() {
         const shape = this.getRotatedShape();
-        const color = this.type === 'inflow' ? '#4a9eff' : '#ff6b6b';
-        const strokeColor = this.type === 'inflow' ? '#2d5aa0' : '#cc0000';
 
         for (let row = 0; row < shape.length; row++) {
             for (let col = 0; col < shape[row].length; col++) {
                 if (shape[row][col]) {
                     const x = (this.x + col) * CELL_SIZE;
                     const y = this.y + row * CELL_SIZE;
-
-                    // Draw block with gradient
-                    const gradient = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
-                    gradient.addColorStop(0, color);
-                    gradient.addColorStop(1, this.type === 'inflow' ? '#2d5aa0' : '#cc0000');
-
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
                     
-                    ctx.strokeStyle = strokeColor;
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                    // Draw dollar bill instead of colored block
+                    this.drawDollarBill(x, y);
                 }
             }
         }
@@ -443,28 +474,59 @@ function drawBands() {
     ctx.fillText('OVERDRAFT', BOARD_WIDTH / 2, OVERDRAFT_Y + 20);
 }
 
+// Draw dollar bill block (helper function for stacked blocks)
+function drawDollarBillBlock(x, y) {
+    // Base green color (dollar bill green)
+    const baseColor = '#c9e7c5';
+    const darkGreen = '#87c87a';
+    const borderColor = '#5a8a4f';
+    
+    // Draw base rectangle with gradient (dollar bill color)
+    const gradient = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
+    gradient.addColorStop(0, baseColor);
+    gradient.addColorStop(0.5, '#b5d9b0');
+    gradient.addColorStop(1, darkGreen);
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x + 1, y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+    
+    // Draw border (dollar bill edge)
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 0.5, y + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+    
+    // Add some dollar bill pattern/texture
+    ctx.strokeStyle = 'rgba(90, 138, 79, 0.3)';
+    ctx.lineWidth = 0.5;
+    
+    // Draw horizontal lines (bill texture)
+    for (let i = 0; i < 3; i++) {
+        const offsetY = y + 2 + (i * (CELL_SIZE - 4) / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + 2, offsetY);
+        ctx.lineTo(x + CELL_SIZE - 2, offsetY);
+        ctx.stroke();
+    }
+    
+    // Draw dollar sign pattern
+    ctx.fillStyle = 'rgba(90, 138, 79, 0.4)';
+    ctx.font = `${CELL_SIZE * 0.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('$', x + CELL_SIZE / 2, y + CELL_SIZE / 2);
+}
+
 // Draw stacked blocks
 function drawStackedBlocks() {
     for (let row = 0; row < ROWS; row++) {
         if (stackedBlocks[row]) {
             for (let col = 0; col < COLS; col++) {
                 if (stackedBlocks[row][col]) {
-                    const block = stackedBlocks[row][col];
                     const x = col * CELL_SIZE;
                     const y = row * CELL_SIZE;
-                    const color = block.type === 'inflow' ? '#4a9eff' : '#ff6b6b';
-                    const strokeColor = block.type === 'inflow' ? '#2d5aa0' : '#cc0000';
-
-                    const gradient = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
-                    gradient.addColorStop(0, color);
-                    gradient.addColorStop(1, block.type === 'inflow' ? '#2d5aa0' : '#cc0000');
-
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
                     
-                    ctx.strokeStyle = strokeColor;
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                    // Draw dollar bill instead of colored block
+                    drawDollarBillBlock(x, y);
                 }
             }
         }
