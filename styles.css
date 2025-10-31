@@ -12,45 +12,61 @@ body {
     justify-content: center;
     align-items: center;
     color: #fff;
+    padding: 20px;
+    overflow: hidden;
 }
 
 .game-container {
     display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 30px;
+    max-width: 1200px;
+    width: 100%;
+    justify-content: center;
+}
+
+.game-board-container {
+    display: flex;
     flex-direction: column;
     align-items: center;
+}
+
+.side-panel {
+    display: flex;
+    flex-direction: column;
     gap: 20px;
-    padding: 20px;
+    min-width: 280px;
+    max-width: 320px;
 }
 
 .header {
-    text-align: center;
-    width: 100%;
+    text-align: left;
 }
 
 .header h1 {
-    font-size: 2.5em;
-    margin-bottom: 15px;
+    font-size: 2em;
+    margin-bottom: 0;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .game-info {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .score-display {
     display: flex;
-    gap: 20px;
-    font-size: 1.2em;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 1.1em;
     font-weight: 600;
 }
 
 .score-display span {
     background: rgba(255, 255, 255, 0.2);
-    padding: 8px 15px;
+    padding: 10px 15px;
     border-radius: 8px;
     backdrop-filter: blur(10px);
 }
@@ -66,6 +82,7 @@ button {
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    width: 100%;
 }
 
 button:hover {
@@ -78,25 +95,16 @@ button:active {
     transform: translateY(0);
 }
 
-.game-board-container {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-}
-
 .instructions {
-    text-align: center;
     background: rgba(255, 255, 255, 0.1);
-    padding: 10px 20px;
+    padding: 15px 20px;
     border-radius: 8px;
     backdrop-filter: blur(10px);
     font-size: 0.9em;
 }
 
 .instructions p {
-    margin: 5px 0;
+    margin: 8px 0;
 }
 
 #game-canvas {
@@ -143,14 +151,32 @@ button:active {
     display: none;
 }
 
-@media (max-width: 600px) {
-    .header h1 {
-        font-size: 1.8em;
+@media (max-width: 900px) {
+    .game-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .side-panel {
+        min-width: 100%;
+        max-width: 100%;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .header {
+        text-align: center;
     }
     
     .game-info {
-        flex-direction: column;
-        gap: 10px;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .score-display {
+        flex-direction: row;
+        justify-content: center;
+        width: 100%;
     }
     
     #game-canvas {

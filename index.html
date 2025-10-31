@@ -8,8 +8,15 @@
 </head>
 <body>
     <div class="game-container">
-        <div class="header">
-            <h1>Liquidity Rush</h1>
+        <div class="game-board-container">
+            <canvas id="game-canvas" width="300" height="600"></canvas>
+        </div>
+        
+        <div class="side-panel">
+            <div class="header">
+                <h1>Liquidity Rush</h1>
+            </div>
+            
             <div class="game-info">
                 <div class="score-display">
                     <span>Time: <span id="time">0</span>s</span>
@@ -17,14 +24,11 @@
                 </div>
                 <button id="start-btn">Start Game</button>
             </div>
-        </div>
-        
-        <div class="game-board-container">
+            
             <div class="instructions">
                 <p><strong>Controls:</strong> ← → to move, ↑ to rotate, ↓ to drop faster</p>
                 <p><strong>Goal:</strong> Keep blocks between the two lines (avoid OVERDRAFT and EXCESS CASH)</p>
             </div>
-            <canvas id="game-canvas" width="300" height="600"></canvas>
         </div>
         
         <div id="game-over" class="game-over hidden">
