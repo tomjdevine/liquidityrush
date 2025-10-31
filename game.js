@@ -21,7 +21,6 @@ let gameRunning = false;
 let gameStartTime = 0;
 let currentPiece = null;
 let stackedBlocks = [];
-let balance = 50; // Start at 50% (middle)
 let dropTime = 0;
 let lastTime = 0;
 
@@ -216,26 +215,7 @@ function placeBlock(block) {
 
     blocksPlaced++;
     
-    // Update balance based on block type and size (for display purposes)
-    let cellCount = 0;
-    for (let row = 0; row < shape.length; row++) {
-        for (let col = 0; col < shape[row].length; col++) {
-            if (shape[row][col]) cellCount++;
-        }
-    }
-    
-    // Each cell changes balance by 2%
-    const balanceChange = cellCount * 2;
-    
-    if (block.type === 'inflow') {
-        balance = Math.min(100, balance + balanceChange);
-    } else {
-        balance = Math.max(0, balance - balanceChange);
-    }
-
-    updateBalanceDisplay();
-    
-    // Check game over conditions
+    // Check game over conditions (blocks must be between the two lines)
     if (hasExcessCashBlocks) {
         endGame('Excess Cash Limit Exceeded!');
     } else if (hasOverdraftBlocks) {
@@ -331,35 +311,10 @@ function drawStackedBlocks() {
     }
 }
 
-// Draw balance indicator
-function drawBalanceIndicator() {
-    const balanceY = BOARD_HEIGHT * (1 - balance / 100);
-    
-    // Draw line at current balance
-    ctx.strokeStyle = '#ffeb3b';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(0, balanceY);
-    ctx.lineTo(BOARD_WIDTH, balanceY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Draw indicator circle
-    ctx.fillStyle = '#ffeb3b';
-    ctx.beginPath();
-    ctx.arc(BOARD_WIDTH / 2, balanceY, 8, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-}
-
-// Update balance display
+// Update balance display (shows blocks placed count instead)
 function updateBalanceDisplay() {
     const balanceElement = document.getElementById('balance');
-    balanceElement.textContent = Math.round(balance) + '%';
+    balanceElement.textContent = blocksPlaced;
 }
 
 // Update time display
@@ -381,9 +336,6 @@ function draw() {
 
     // Draw stacked blocks
     drawStackedBlocks();
-
-    // Draw balance indicator
-    drawBalanceIndicator();
 
     // Draw current falling piece
     if (currentPiece) {
@@ -435,7 +387,6 @@ function gameLoop(time = 0) {
 function startGame() {
     gameRunning = true;
     gameStartTime = Date.now();
-    balance = 50;
     stackedBlocks = [];
     blocksPlaced = 0;
     currentPiece = createNewPiece();
