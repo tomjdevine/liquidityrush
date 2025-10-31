@@ -19,6 +19,7 @@ let blocksPlaced = 0;
 let warningTimer = null; // null means no timer active, otherwise it's the end time
 const WARNING_TIMER_DURATION = 20000; // 20 seconds in milliseconds
 let hasSolidLayerAboveOverdraft = false;
+let hasTopBlockBeenAboveOverdraft = false; // Track if top block has been above overdraft line at rest
 
 // Line clearing animation state
 let clearingAnimation = null; // { rows: [row numbers], startTime: timestamp }
@@ -635,10 +636,18 @@ function gameLoop(time = 0) {
         
         if (topBlockY !== null) {
             const isTopBlockBelowOverdraft = topBlockY > OVERDRAFT_Y;
-            const isTopBlockAboveExcessCash = topBlockY < EXCESS_CASH_Y;
+            const isTopBlockAboveOverdraft = topBlockY <= OVERDRAFT_Y;
             
-            if (isTopBlockBelowOverdraft || isTopBlockAboveExcessCash) {
-                // Top block is outside safe zone - start timer if not already started
+            // Track if top block has been above overdraft line (at rest)
+            if (isTopBlockAboveOverdraft) {
+                hasTopBlockBeenAboveOverdraft = true;
+            }
+            
+            // Start timer only if:
+            // 1. Top block has been above overdraft line at rest before
+            // 2. Top block is now below overdraft line (dropped down)
+            if (hasTopBlockBeenAboveOverdraft && isTopBlockBelowOverdraft) {
+                // Top block has dropped below overdraft line - start timer if not already started
                 if (warningTimer === null) {
                     warningTimer = Date.now() + WARNING_TIMER_DURATION;
                 }
@@ -651,8 +660,8 @@ function gameLoop(time = 0) {
                         return;
                     }
                 }
-            } else {
-                // Top block is back in safe zone - cancel timer
+            } else if (isTopBlockAboveOverdraft) {
+                // Top block is back above overdraft line - cancel timer
                 warningTimer = null;
             }
         }
@@ -676,6 +685,7 @@ function startGame() {
     warningTimer = null;
     clearingAnimation = null;
     hasSolidLayerAboveOverdraft = false;
+    hasTopBlockBeenAboveOverdraft = false;
     currentPiece = createNewPiece();
     dropTime = 0;
     lastTime = performance.now();
