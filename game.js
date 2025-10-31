@@ -540,7 +540,26 @@ function updateBalanceDisplay() {
     balanceElement.textContent = blocksPlaced;
 }
 
-// Draw timer warning
+// Update timer display in side panel
+function updateTimerDisplay() {
+    const timerWarningDiv = document.getElementById('timer-warning');
+    const timerCountdownSpan = document.getElementById('timer-countdown');
+    
+    if (warningTimer === null) {
+        timerWarningDiv.classList.add('hidden');
+        return;
+    }
+    
+    const now = Date.now();
+    const remaining = Math.max(0, warningTimer - now);
+    const seconds = Math.ceil(remaining / 1000);
+    
+    // Show timer warning
+    timerWarningDiv.classList.remove('hidden');
+    timerCountdownSpan.textContent = seconds;
+}
+
+// Draw timer warning on canvas
 function drawTimerWarning() {
     if (warningTimer === null) return;
     
@@ -548,20 +567,31 @@ function drawTimerWarning() {
     const remaining = Math.max(0, warningTimer - now);
     const seconds = Math.ceil(remaining / 1000);
     
-    // Draw warning overlay
-    ctx.fillStyle = 'rgba(244, 67, 54, 0.3)';
+    // Draw warning overlay with pulsing effect
+    const pulseIntensity = 0.2 + (0.3 * (Math.sin(Date.now() / 200) + 1) / 2);
+    ctx.fillStyle = `rgba(244, 67, 54, ${pulseIntensity})`;
     ctx.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
     
-    // Draw timer text
+    // Draw timer text with larger, more visible font
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 48px sans-serif';
+    ctx.font = 'bold 72px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(seconds, BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 4;
+    
+    // Draw text with stroke for better visibility
+    const timerText = seconds.toString();
+    ctx.strokeText(timerText, BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
+    ctx.fillText(timerText, BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
     
     // Draw warning text
-    ctx.font = 'bold 20px sans-serif';
-    ctx.fillText('WARNING!', BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 40);
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillStyle = '#ffeb3b';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText('WARNING!', BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 60);
+    ctx.fillText('WARNING!', BOARD_WIDTH / 2, BOARD_HEIGHT / 2 - 60);
 }
 
 // Update time display
@@ -670,6 +700,9 @@ function gameLoop(time = 0) {
 
     // Update time display
     updateTimeDisplay();
+    
+    // Update timer display
+    updateTimerDisplay();
 
     // Draw everything
     draw();
@@ -693,8 +726,10 @@ function startGame() {
     
     document.getElementById('game-over').classList.add('hidden');
     document.getElementById('start-btn').textContent = 'Restart';
+    document.getElementById('timer-warning').classList.add('hidden');
     updateBalanceDisplay();
     updateTimeDisplay();
+    updateTimerDisplay();
     
     requestAnimationFrame(gameLoop);
 }

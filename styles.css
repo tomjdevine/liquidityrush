@@ -151,6 +151,32 @@ button:active {
     display: none;
 }
 
+.timer-warning {
+    background: rgba(244, 67, 54, 0.9);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    animation: pulse 1s infinite;
+}
+
+.timer-display {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.02);
+    }
+}
+
 @media (max-width: 900px) {
     .game-container {
         flex-direction: column;
